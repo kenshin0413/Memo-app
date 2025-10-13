@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct Memo_appApp: App {
+    let persistence = PersistenceController.shared
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MemoView()
+            // 👇 CoreDataのcontextを環境変数として注入
+                .environment(\.managedObjectContext, persistence.context)
         }
     }
 }
