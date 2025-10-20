@@ -2,53 +2,63 @@
 //  MemoView.swift
 //  Memo-app
 //
-//  Created by miyamotokenshin on R 7/10/12.
+//  Created by miyamotokenshin on R 7/10/14.
 //
 
 import SwiftUI
-import CoreData
 
 struct MemoView: View {
     @StateObject var viewModel = MemoViewModel()
-    // 👇 これでCoreDataのcontextを取得できる
+    @FocusState var focusedField: Field?
     @Environment(\.managedObjectContext) private var context
-    // 👇 CoreDataのデータを自動取得（List表示）
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Memo.date, ascending: false)]
+        sortDescriptors: [NSSortDescriptor(keyPath: \Memo.isPinned, ascending: false), NSSortDescriptor(keyPath: \Memo.date, ascending: false)]
     ) private var memos: FetchedResults<Memo>
+    @Environment(\.dismiss) var dismiss
+    init(viewModel: MemoViewModel = MemoViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
     
     var body: some View {
         NavigationStack {
             VStack {
-                HStack {
-                    TextField("メモを入力", text: $viewModel.newMemo)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Button("追加") {
-                        viewModel.addMemo(context: context)
+                TextField("タイトルを入力してください", text: $viewModel.title)
+                    .padding()
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focusedField, equals: .title)
+                    .submitLabel(.next)
+                    .onSubmit {
+                        focusedField = .body
                     }
-                    .buttonStyle(.borderedProminent)
-                }
-                .padding()
                 
-                List {
-                    ForEach(memos) { memo in
-                        VStack(alignment: .leading) {
-                            Text(memo.title ?? "タイトルなし")
-                            if let date = memo.date {
-                                Text(date.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                    .onDelete { indexSet in
-                        viewModel.deleteMemo(context: context, offsets: indexSet, memos: Array(memos))
+                Divider()
+                
+                TextEditor(text: $viewModel.body)
+                    .padding()
+                    .scrollContentBackground(.hidden)
+                    .focused($focusedField, equals: .body)
+                    .font(.body)
+            }
+            .navigationTitle("メモ")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        viewModel.saveMemo(context: context)
+                        dismiss()
+                    } label: {
+                        Text("保存")
                     }
                 }
             }
-            .navigationTitle("メモ一覧")
-            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if let memo = viewModel.memo {
+                    viewModel.title = memo.title ?? ""
+                    viewModel.body = memo.body ?? ""
+                } else {
+                    focusedField = .title
+                }
+            }
         }
     }
 }

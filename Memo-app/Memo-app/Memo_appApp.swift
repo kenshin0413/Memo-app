@@ -12,7 +12,7 @@ struct Memo_appApp: App {
     let persistence = PersistenceController.shared
     var body: some Scene {
         WindowGroup {
-            MemoView()
+            MemoListView()
             // 👇 CoreDataのcontextを環境変数として注入
                 .environment(\.managedObjectContext, persistence.context)
         }
