@@ -12,17 +12,25 @@ struct MemoListView: View {
     @StateObject var viewModel = MemoListViewModel()
     @Environment(\.managedObjectContext) private var context
     // 並び替えの優先順位
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Memo.isPinned, ascending: false), NSSortDescriptor(keyPath: \Memo.date, ascending: false)]
-    ) private var memos: FetchedResults<Memo>
-    
     @State var showModal = false
+    
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 VStack {
+                    Picker("並び替え", selection: $viewModel.sortOption) {
+                        ForEach(SortOption.allCases, id: \.self) { option in
+                            Text(option.rawValue)
+                        }
+                    }
+                    .padding()
+                    .pickerStyle(.navigationLink)
+                    .onChange(of: viewModel.sortOption) {
+                        viewModel.fetchMemos(context: context)
+                    }
+                    
                     List {
-                        ForEach(memos) { memo in
+                        ForEach(viewModel.memos) { memo in
                             NavigationLink {
                                 MemoView(viewModel: MemoViewModel(memo: memo))
                             } label: {
@@ -53,12 +61,17 @@ struct MemoListView: View {
                             .background(memo.isPinned ? Color.yellow.opacity(0.2) : Color(.systemBackground))
                         }
                         .onDelete { indexSet in
-                            viewModel.deleteMemo(context: context, offsets: indexSet, memos: Array(memos))
+                            viewModel.deleteMemo(context: context, offsets: indexSet, memos: viewModel.memos)
                         }
                     }
-                    .sheet(isPresented: $showModal) {
-                        MemoView()
-                    }
+                    .sheet(isPresented: $showModal, content: {
+                        MemoView(onSave: {
+                            viewModel.fetchMemos(context: context)
+                        })
+                    })
+                }
+                .onAppear {
+                    viewModel.fetchMemos(context: context)
                 }
                 
                 Button {

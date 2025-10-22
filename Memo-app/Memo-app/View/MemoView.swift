@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct MemoView: View {
+    var onSave: (() -> Void)? = nil
     @StateObject var viewModel = MemoViewModel()
     @FocusState var focusedField: Field?
     @Environment(\.managedObjectContext) private var context
@@ -15,8 +16,9 @@ struct MemoView: View {
         sortDescriptors: [NSSortDescriptor(keyPath: \Memo.isPinned, ascending: false), NSSortDescriptor(keyPath: \Memo.date, ascending: false)]
     ) private var memos: FetchedResults<Memo>
     @Environment(\.dismiss) var dismiss
-    init(viewModel: MemoViewModel = MemoViewModel()) {
+    init(viewModel: MemoViewModel = MemoViewModel(), onSave: (() -> Void)? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel)
+        self.onSave = onSave
     }
     
     var body: some View {
@@ -45,6 +47,7 @@ struct MemoView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         viewModel.saveMemo(context: context)
+                        onSave?()
                         dismiss()
                     } label: {
                         Text("保存")
